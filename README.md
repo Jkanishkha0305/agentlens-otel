@@ -1,4 +1,7 @@
-# AgentLens
+# AgentLens# AgentLens
+
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-1.27-green) ![Grafana](https://img.shields.io/badge/Grafana-10.4-red) ![Jaeger](https://img.shields.io/badge/Jaeger-1.57-orange) ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C-blue)
+
 
 AgentLens is an observability demo for AI agents doing GitHub PR triage.
 
