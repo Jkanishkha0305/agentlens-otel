@@ -47,11 +47,14 @@ def _parse_pr_url(pr_url: str) -> tuple[str, str, str]:
 
 
 def _github_headers(token: str, accept: str) -> dict[str, str]:
-    return {
+    headers = {
         "Accept": accept,
-        "Authorization": f"Bearer {token}",
+        "User-Agent": "agentlens-demo",
         "X-GitHub-Api-Version": "2022-11-28",
     }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 
 def _limit_diff(diff: str) -> tuple[str, bool, int, int]:
@@ -100,12 +103,7 @@ def fetch_pr(request: FetchPRRequest) -> dict[str, object]:
     if not request.pr_url:
         raise HTTPException(status_code=400, detail="Either pr_url or use_mock=true is required")
 
-    github_token = os.getenv("GITHUB_TOKEN")
-    if not github_token:
-        raise HTTPException(
-            status_code=400,
-            detail="GITHUB_TOKEN is required when fetching a real GitHub pull request",
-        )
+    github_token = os.getenv("GITHUB_TOKEN", "")
 
     owner, repo, pr_number = _parse_pr_url(request.pr_url)
     pr_endpoint = f"{GITHUB_API_URL}/repos/{owner}/{repo}/pulls/{pr_number}"
