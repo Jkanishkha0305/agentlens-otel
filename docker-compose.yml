@@ -1,0 +1,116 @@
+services:
+  # ── AgentLens services ──────────────────────────────────────────────────────
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python mcp_server/github_mcp.py
+    ports:
+      - "8001:8001"
+    env_file: .env
+    networks:
+      - agentlens
+
+  triage-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python agents/triage_agent.py
+    ports:
+      - "8010:8010"
+    env_file: .env
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - MCP_SERVER_URL=http://mcp-server:8001
+      - SECURITY_AGENT_URL=http://security-agent:8011
+    networks:
+      - agentlens
+
+  security-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python agents/security_agent.py
+    ports:
+      - "8011:8011"
+    env_file: .env
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - MCP_SERVER_URL=http://mcp-server:8001
+      - DECISION_AGENT_URL=http://decision-agent:8012
+    networks:
+      - agentlens
+
+  decision-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python agents/decision_agent.py
+    ports:
+      - "8012:8012"
+    env_file: .env
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    networks:
+      - agentlens
+
+  # ── Observability additions ──────────────────────────────────────────────────
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    ports:
+      - "16686:16686"
+      - "14317:4317"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - agentlens
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=agentlens
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - agentlens
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+      - "8889:8889"
+    networks:
+      - agentlens
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - agentlens
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.101.0
+    ports:
+      - "8428:8428"
+    command:
+      - "--retentionPeriod=12"
+    networks:
+      - agentlens
+
+networks:
+  agentlens:
+    driver: bridge
